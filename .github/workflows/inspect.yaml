@@ -29,3 +29,13 @@ jobs:
 
       - name: Unit tests
         run: dotnet test --no-build --configuration Release --verbosity normal --nologo --logger "console;verbosity=normal" --logger "trx;LogFileName=test_results.trx" --results-directory ./TestResults
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f
+        env:
+          SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ secrets.SONARQUBE_PROJECT_KEY }}
+            -Dsonar.organization=${{ secrets.SONARQUBE_ORGANIZATION_KEY }}
+            -Dsonar.host.url=https://sonarcloud.io
