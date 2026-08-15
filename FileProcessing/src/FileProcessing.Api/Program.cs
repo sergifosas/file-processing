@@ -14,8 +14,14 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// Se omite la redirección HTTPS durante los tests de integración (TestServer no expone un puerto HTTPS).
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    app.UseHttpsRedirection();
+}
 
 app.MapWeatherForecastEndpoints();
 
 app.Run();
+
+public partial class Program { }
