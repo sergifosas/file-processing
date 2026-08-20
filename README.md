@@ -1,8 +1,8 @@
 # FileProcessing
 
-API para el procesamiento de archivos.
+File processing API.
 
-## Estructura del proyecto
+## Project structure
 
 ```
 FileProcessing/
@@ -12,19 +12,31 @@ FileProcessing/
 │       │
 │       ├── Features/
 │       │   ├── Files/
+│       │   │   └── Upload/
+│       │   │       └── UploadEndpoint.cs
 │       │   ├── Processing/
 │       │   └── Jobs/
 │       │
 │       ├── Application/
 │       │   ├── Abstractions/
 │       │   └── Services/
+│       │       ├── FileProcessingService.cs
+│       │       ├── IFileStorage.cs
+│       │       └── IFileRepository.cs
 │       │
 │       ├── Domain/
+│       │   └── Files/
+│       │       └── StoredFile.cs
 │       │
 │       ├── Infrastructure/
 │       │   ├── Storage/
+│       │   │   └── LocalFileStorage.cs
 │       │   ├── Processing/
 │       │   └── Persistence/
+│       │       ├── FileProcessingDbContext.cs
+│       │       ├── FileRepository.cs
+│       │       └── Configurations/
+│       │           └── StoredFileConfiguration.cs
 │       │
 │       ├── Common/
 │       │
@@ -41,21 +53,36 @@ FileProcessing/
 └── FileProcessing.slnx
 ```
 
-### Convenciones
+### Conventions
 
-- **Features**: agrupa la funcionalidad por caso de uso (endpoints, requests/responses propios de cada feature).
-- **Application**: contratos (`Abstractions`) e implementaciones de servicios de aplicación (`Services`) que orquestan la lógica de negocio.
-- **Domain**: entidades y lógica de dominio, sin dependencias externas.
-- **Infrastructure**: implementaciones concretas de acceso a almacenamiento (`Storage`), procesamiento (`Processing`) y persistencia (`Persistence`).
-- **Common**: utilidades transversales compartidas por el resto de capas.
+- **Features**: groups the functionality by use case (endpoints and feature-specific requests/responses).
+- **Application**: application contracts and services (`Services`) that orchestrate the business logic. `FileProcessingService` depends only on the `IFileStorage` and `IFileRepository` abstractions.
+- **Domain**: entities and domain logic, with no external dependencies.
+- **Infrastructure**: concrete implementations for storage (`Storage` → `LocalFileStorage`), processing (`Processing`) and persistence (`Persistence` → EF Core/PostgreSQL).
+- **Common**: cross-cutting utilities shared across the rest of the layers.
 
-> No se crean todavía carpetas como `DTOs`, `Factories`, `Helpers`, `Managers`, `Mappers`, `Validators`, etc. Se crearán únicamente cuando exista una necesidad real.
+> Folders such as `DTOs`, `Factories`, `Helpers`, `Managers`, `Mappers`, `Validators`, etc. are not created yet. They will only be created when there is a real need.
 
-## Requisitos
+### Flow of file uploads
+
+```
+Features (UploadEndpoint receives the IFormFile)
+    │
+    ▼
+Application (FileProcessingService orchestrates the use case)
+    │
+    ├── IFileStorage      → Infrastructure/Storage   → LocalFileStorage (disk)
+    └── IFileRepository   → Infrastructure/Persistence → FileRepository (PostgreSQL)
+```
+
+The endpoint receives the ASP.NET Core `IFormFile` and turns it into a `Stream` plus metadata. `FileProcessingService` delegates physical storage to `IFileStorage` and metadata persistence to `IFileRepository`, so the Application layer depends on neither ASP.NET Core nor EF Core.
+
+## Requirements
 
 - [.NET SDK 10](https://dotnet.microsoft.com/download)
+- PostgreSQL (to run locally). The `Testing` environment uses the EF Core in-memory database provider so that tests do not depend on an external server.
 
-## Cómo ejecutar
+## How to run
 
 ```bash
 dotnet restore
@@ -63,7 +90,7 @@ dotnet build
 dotnet run --project src/FileProcessing.Api
 ```
 
-## Cómo probar
+## How to test
 
 ```bash
 dotnet test
