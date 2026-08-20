@@ -1,4 +1,4 @@
-using FileProcessing.Api.Features.WeatherForecasts;
+using FileProcessing.Api.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,6 +6,8 @@ builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Services.AddScoped<FileProcessingService>();
 
 var app = builder.Build();
 
@@ -21,9 +23,6 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     app.UseHttpsRedirection();
 }
-
-app.MapWeatherForecastEndpoints();
-
 
 app.MapControllers();
 
