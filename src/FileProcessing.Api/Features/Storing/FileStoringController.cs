@@ -20,8 +20,12 @@ public class FileStoringController : ControllerBase
         if (file is null || file.Length == 0)
             return BadRequest("File is required.");
 
-        await _fileProcessingService.ProcessAsync(file);
+        var storedName = await _fileProcessingService.ProcessAsync(file);
 
-        return Ok();
+        return Ok(new
+        {
+            originalName = file.FileName,
+            storedName
+        });
     }
 }

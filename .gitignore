@@ -6,6 +6,9 @@
 # dotenv files
 .env
 
+# Uploaded files (runtime artifact)
+uploads/
+
 # User-specific files
 *.rsuser
 *.suo

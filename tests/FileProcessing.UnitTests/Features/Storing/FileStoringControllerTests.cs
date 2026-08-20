@@ -50,6 +50,7 @@ public class FileStoringControllerTests
 
         var result = await controller.Process(CreateFile());
 
-        Assert.IsType<OkResult>(result);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(okResult.Value);
     }
 }
