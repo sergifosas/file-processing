@@ -1,32 +1,52 @@
+using FileProcessing.Api.Domain.Files;
+
 namespace FileProcessing.Api.Application.Services;
 
 public class FileProcessingService
 {
-    public async Task<string> ProcessAsync(IFormFile file)
+    private readonly IFileStorage _storage;
+    private readonly IFileRepository _repository;
+
+    public FileProcessingService(
+        IFileStorage storage,
+        IFileRepository repository)
+    {
+        _storage = storage;
+        _repository = repository;
+    }
+
+    public async Task<string> ProcessAsync(
+        Stream file,
+        string originalName,
+        string contentType,
+        long size)
     {
         if (file is null)
             throw new ArgumentNullException(nameof(file));
 
-        if (file.Length == 0)
-            throw new ArgumentException("El archivo está vacío.", nameof(file));
+        if (size == 0)
+            throw new ArgumentException("El archivo está vacío.", nameof(size));
 
-        var uploadsPath = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "uploads"
+        var storedName =
+            $"{Guid.NewGuid()}{Path.GetExtension(originalName)}";
+
+        var path = await _storage.SaveAsync(
+            file,
+            storedName
         );
 
-        Directory.CreateDirectory(uploadsPath);
+        var storedFile = new StoredFile
+        {
+            OriginalName = originalName,
+            StoredName = storedName,
+            ContentType = contentType,
+            Size = size,
+            Path = path,
+            CreatedAt = DateTime.UtcNow
+        };
 
-        var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-        var filePath = Path.Combine(uploadsPath, fileName);
+        await _repository.AddAsync(storedFile);
 
-        await using var stream = new FileStream(
-            filePath,
-            FileMode.Create
-        );
-
-        await file.CopyToAsync(stream);
-
-        return fileName;
+        return storedName;
     }
 }

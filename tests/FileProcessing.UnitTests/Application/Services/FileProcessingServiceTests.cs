@@ -1,44 +1,59 @@
 using FileProcessing.Api.Application.Services;
-using Microsoft.AspNetCore.Http;
+using FileProcessing.UnitTests.TestDoubles;
 
 namespace FileProcessing.UnitTests.Application.Services;
 
 public class FileProcessingServiceTests
 {
-    private readonly FileProcessingService _service = new();
+    private readonly FakeFileStorage _storage;
+    private readonly FakeFileRepository _repository;
+    private readonly FileProcessingService _service;
+
+    public FileProcessingServiceTests()
+    {
+        _storage = new FakeFileStorage();
+        _repository = new FakeFileRepository();
+        _service = new FileProcessingService(_storage, _repository);
+    }
 
     [Fact]
-    public async Task ProcessAsync_NullFile_ThrowsArgumentNullException()
+    public async Task ProcessAsync_NullStream_ThrowsArgumentNullException()
     {
-        await Assert.ThrowsAsync<ArgumentNullException>(() => _service.ProcessAsync(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            _service.ProcessAsync(null!, "test.txt", "text/plain", 10));
     }
 
     [Fact]
     public async Task ProcessAsync_EmptyFile_ThrowsArgumentException()
     {
-        var emptyFile = new FormFile(new MemoryStream(), 0, 0, "file", "empty.txt");
+        using var stream = new MemoryStream();
 
-        await Assert.ThrowsAsync<ArgumentException>(() => _service.ProcessAsync(emptyFile));
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.ProcessAsync(stream, "empty.txt", "text/plain", 0));
     }
 
     [Fact]
-    public async Task ProcessAsync_ValidFile_StoresFileAndReturnsGeneratedName()
+    public async Task ProcessAsync_ValidFile_StoresMetadataAndReturnsGeneratedName()
     {
-        var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("contenido de prueba"));
-        var file = new FormFile(stream, 0, stream.Length, "file", "test.txt")
-        {
-            Headers = new HeaderDictionary(),
-            ContentType = "text/plain"
-        };
+        using var stream = new MemoryStream(
+            System.Text.Encoding.UTF8.GetBytes("contenido de prueba"));
 
-        var storedName = await _service.ProcessAsync(file);
+        var storedName = await _service.ProcessAsync(
+            stream,
+            "test.txt",
+            "text/plain",
+            stream.Length);
 
         Assert.False(string.IsNullOrWhiteSpace(storedName));
         Assert.EndsWith(".txt", storedName);
 
-        var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", storedName);
-        Assert.True(File.Exists(uploadsPath));
+        var storedFile = Assert.Single(_repository.Files);
 
-        File.Delete(uploadsPath);
+        Assert.Equal("test.txt", storedFile.OriginalName);
+        Assert.Equal("text/plain", storedFile.ContentType);
+        Assert.Equal(stream.Length, storedFile.Size);
+        Assert.Equal(storedName, storedFile.StoredName);
+        Assert.Equal(storedName, _storage.SavedFileName);
+        Assert.Same(stream, _storage.SavedStream);
     }
 }
