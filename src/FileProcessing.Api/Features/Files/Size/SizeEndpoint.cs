@@ -1,24 +1,27 @@
 using FileProcessing.Api.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace FileProcessing.Api.Features.Files.Upload;
+namespace FileProcessing.Api.Features.Files.Size;
 
 [ApiController]
 [Route("files")]
-public class UploadEndpoint : ControllerBase
+public class SizeEndpoint : ControllerBase
 {
     private readonly FileProcessingService _fileProcessingService;
 
-    public UploadEndpoint(FileProcessingService fileProcessingService)
+    public SizeEndpoint(FileProcessingService fileProcessingService)
     {
         _fileProcessingService = fileProcessingService;
     }
 
-    [HttpPost("upload")]
-    public async Task<IActionResult> Upload(IFormFile file)
+    [HttpPost("size")]
+    public async Task<IActionResult> GetSize(IFormFile file)
     {
         if (file is null || file.Length == 0)
             return BadRequest("File is required.");
+
+        long sizeInBytes = file.Length;
+        double sizeInMb = sizeInBytes / (1024.0 * 1024.0);
 
         await using var stream = file.OpenReadStream();
 
@@ -26,9 +29,15 @@ public class UploadEndpoint : ControllerBase
             stream,
             file.FileName,
             file.ContentType,
-            file.Length
+            sizeInBytes
         );
 
-        return Ok(storedName);
+        return Ok(new
+        {
+            StoredName = storedName,
+            FileSizeInBytes = sizeInBytes,
+            FileSizeInMb = Math.Round(sizeInMb, 2)
+        });
     }
+
 }
