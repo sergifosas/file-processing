@@ -24,7 +24,7 @@ public class FileStoringTests : IClassFixture<WebApplicationFactory<Program>>
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("text/plain");
         content.Add(fileContent, "file", "test.txt");
 
-        var response = await client.PostAsync("/files/process", content);
+        var response = await client.PostAsync("/files/upload", content);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -39,7 +39,7 @@ public class FileStoringTests : IClassFixture<WebApplicationFactory<Program>>
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("text/plain");
         content.Add(fileContent, "file", "empty.txt");
 
-        var response = await client.PostAsync("/files/process", content);
+        var response = await client.PostAsync("/files/upload", content);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -51,7 +51,7 @@ public class FileStoringTests : IClassFixture<WebApplicationFactory<Program>>
 
         using var content = new MultipartFormDataContent();
 
-        var response = await client.PostAsync("/files/process", content);
+        var response = await client.PostAsync("/files/upload", content);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
