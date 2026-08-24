@@ -2,6 +2,11 @@ using FileProcessing.Api.Domain.Files;
 
 namespace FileProcessing.Api.Application.Services;
 
+public sealed record DownloadResult(
+    Stream Content,
+    string ContentType,
+    string OriginalName);
+
 public class FileProcessingService
 {
     private readonly IFileStorage _storage;
@@ -53,7 +58,7 @@ public class FileProcessingService
         return storedName;
     }
 
-   public async Task<string> ProcessS3Async(
+    public async Task<string> ProcessS3Async(
         Stream file,
         string originalName,
         string contentType,
@@ -88,5 +93,25 @@ public class FileProcessingService
         await _repository.AddAsync(storedFile);
 
         return storedName;
+    }
+
+    public async Task<DownloadResult?> DownloadS3Async(string storedName)
+    {
+        if (string.IsNullOrWhiteSpace(storedName))
+            throw new ArgumentException(
+                "El nombre almacenado no es válido.",
+                nameof(storedName));
+
+        var storedFile = await _repository.GetAsync(storedName);
+
+        if (storedFile is null)
+            return null;
+
+        var content = await _s3Storage.GetAsync(storedName);
+
+        return new DownloadResult(
+            content,
+            storedFile.ContentType,
+            storedFile.OriginalName);
     }
 }

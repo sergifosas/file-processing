@@ -6,4 +6,6 @@ public interface IStorage
         Stream file,
         string storedName,
         string contentType);
+
+    Task<Stream> GetAsync(string storedName);
 }

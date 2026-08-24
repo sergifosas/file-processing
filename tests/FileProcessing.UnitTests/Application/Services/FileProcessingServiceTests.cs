@@ -1,4 +1,5 @@
 using FileProcessing.Api.Application.Services;
+using FileProcessing.Api.Domain.Files;
 using FileProcessing.UnitTests.TestDoubles;
 
 namespace FileProcessing.UnitTests.Application.Services;
@@ -102,5 +103,49 @@ public class FileProcessingServiceTests
         Assert.Equal(storedName, _s3Storage.SavedStoredName);
         Assert.Same(stream, _s3Storage.SavedStream);
         Assert.Equal("text/plain", _s3Storage.SavedContentType);
+    }
+
+    [Fact]
+    public async Task DownloadS3Async_NullName_ThrowsArgumentException()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.DownloadS3Async(null!));
+    }
+
+    [Fact]
+    public async Task DownloadS3Async_MissingFile_ReturnsNull()
+    {
+        var result = await _service.DownloadS3Async("no-existe.txt");
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task DownloadS3Async_ExistingFile_ReturnsStreamAndMetadata()
+    {
+        const string storedName = "abc.txt";
+
+        _repository.Files.Add(new StoredFile
+        {
+            StoredName = storedName,
+            OriginalName = "original.txt",
+            ContentType = "text/plain",
+            Size = 5,
+            Path = storedName,
+            CreatedAt = DateTime.UtcNow
+        });
+
+        _s3Storage.Objects[storedName] =
+            System.Text.Encoding.UTF8.GetBytes("hola");
+
+        var result = await _service.DownloadS3Async(storedName);
+
+        Assert.NotNull(result);
+        Assert.Equal("text/plain", result!.ContentType);
+        Assert.Equal("original.txt", result.OriginalName);
+        Assert.Equal(storedName, _s3Storage.LastRequestedKey);
+
+        using var reader = new StreamReader(result.Content);
+        Assert.Equal("hola", await reader.ReadToEndAsync());
     }
 }
