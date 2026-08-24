@@ -18,6 +18,27 @@ public sealed class FakeFileStorage : IFileStorage
     }
 }
 
+public sealed class FakeS3Storage : IStorage
+{
+    public Stream? SavedStream { get; private set; }
+
+    public string? SavedStoredName { get; private set; }
+
+    public string? SavedContentType { get; private set; }
+
+    public Task<string> SaveAsync(
+        Stream stream,
+        string storedName,
+        string contentType)
+    {
+        SavedStream = stream;
+        SavedStoredName = storedName;
+        SavedContentType = contentType;
+
+        return Task.FromResult(storedName);
+    }
+}
+
 public sealed class FakeFileRepository : IFileRepository
 {
     public List<StoredFile> Files { get; } = [];

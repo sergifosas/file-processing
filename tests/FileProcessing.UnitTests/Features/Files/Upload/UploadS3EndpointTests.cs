@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace FileProcessing.UnitTests.Features.Files.Upload;
 
-public class UploadEndpointTests
+public class UploadS3EndpointTests
 {
-    private static UploadEndpoint CreateEndpoint() =>
+    private static UploadS3Endpoint CreateEndpoint() =>
         new(new FileProcessingService(
             new FakeFileStorage(),
             new FakeS3Storage(),
@@ -59,5 +59,26 @@ public class UploadEndpointTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.NotNull(okResult.Value);
         Assert.False(string.IsNullOrWhiteSpace(okResult.Value as string));
+    }
+
+    [Fact]
+    public async Task Upload_ValidFile_DelegatesToS3Storage()
+    {
+        var s3Storage = new FakeS3Storage();
+        var endpoint = new UploadS3Endpoint(
+            new FileProcessingService(
+                new FakeFileStorage(),
+                s3Storage,
+                new FakeFileRepository()));
+
+        var file = CreateFile();
+        var result = await endpoint.Upload(file);
+
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var storedName = okResult.Value as string;
+
+        Assert.Equal(storedName, s3Storage.SavedStoredName);
+        Assert.Equal("text/plain", s3Storage.SavedContentType);
+        Assert.NotNull(s3Storage.SavedStream);
     }
 }
