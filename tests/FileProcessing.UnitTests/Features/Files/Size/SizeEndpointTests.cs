@@ -11,6 +11,7 @@ public class SizeEndpointTests
     private static SizeEndpoint CreateEndpoint() =>
         new(new FileProcessingService(
             new FakeFileStorage(),
+            new FakeS3Storage(),
             new FakeFileRepository()));
 
     private static FormFile CreateFile(string content = "contenido de prueba")
@@ -54,7 +55,10 @@ public class SizeEndpointTests
         var storage = new FakeFileStorage();
         var repository = new FakeFileRepository();
         var endpoint = new SizeEndpoint(
-            new FileProcessingService(storage, repository));
+            new FileProcessingService(
+                storage,
+                new FakeS3Storage(),
+                repository));
         var file = CreateFile();
 
         var result = await endpoint.GetSize(file);

@@ -2,6 +2,8 @@ using FileProcessing.Api.Application.Services;
 using FileProcessing.Api.Infrastructure.Persistence;
 using FileProcessing.Api.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
+using Amazon;
+using Amazon.S3;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +30,24 @@ else
         options.UseNpgsql(
             builder.Configuration.GetConnectionString("DefaultConnection")));
 }
+
+
+var awsConfiguration = builder.Configuration.GetSection("AWS");
+
+var s3Config = new AmazonS3Config
+{
+    ServiceURL = awsConfiguration["ServiceUrl"],
+    ForcePathStyle = true
+};
+
+var s3Client = new AmazonS3Client(
+    awsConfiguration["AccessKey"],
+    awsConfiguration["SecretKey"],
+    s3Config);
+
+builder.Services.AddSingleton<IAmazonS3>(s3Client);
+
+builder.Services.AddScoped<IStorage, S3Storage>();
 
 var app = builder.Build();
 
