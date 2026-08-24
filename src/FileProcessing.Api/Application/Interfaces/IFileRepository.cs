@@ -5,4 +5,5 @@ namespace FileProcessing.Api.Application.Services;
 public interface IFileRepository
 {
     Task AddAsync(StoredFile file);
+    Task<StoredFile?> GetAsync(string storedName);
 }

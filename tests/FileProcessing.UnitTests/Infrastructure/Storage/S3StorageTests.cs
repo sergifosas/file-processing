@@ -62,4 +62,31 @@ public class S3StorageTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
+
+    [Fact]
+    public async Task GetAsync_SendsRequestForExpectedKeyAndReturnsResponseStream()
+    {
+        var storage = new S3Storage(
+            _s3.Object,
+            CreateConfiguration("my-bucket").Object);
+
+        using var stream = new MemoryStream(
+            System.Text.Encoding.UTF8.GetBytes("contenido de prueba"));
+
+        _s3
+            .Setup(x => x.GetObjectAsync(
+                It.IsAny<GetObjectRequest>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new GetObjectResponse { ResponseStream = stream });
+
+        var result = await storage.GetAsync("abc.txt");
+
+        Assert.Same(stream, result);
+        _s3.Verify(x => x.GetObjectAsync(
+                It.Is<GetObjectRequest>(r =>
+                    r.BucketName == "my-bucket" &&
+                    r.Key == "abc.txt"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
 }

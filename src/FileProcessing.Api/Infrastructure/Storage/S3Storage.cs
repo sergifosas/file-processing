@@ -37,4 +37,17 @@ public class S3Storage : IStorage
 
         return key;
     }
+
+    public async Task<Stream> GetAsync(string key)
+    {
+        var request = new GetObjectRequest
+        {
+            BucketName = _bucketName,
+            Key = key
+        };
+
+        var response = await _s3.GetObjectAsync(request);
+
+        return response.ResponseStream;
+    }
 }

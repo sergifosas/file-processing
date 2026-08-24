@@ -26,16 +26,34 @@ public sealed class FakeS3Storage : IStorage
 
     public string? SavedContentType { get; private set; }
 
+    public Dictionary<string, byte[]> Objects { get; } = [];
+
+    public string? LastRequestedKey { get; private set; }
+
     public Task<string> SaveAsync(
         Stream stream,
         string storedName,
         string contentType)
     {
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        Objects[storedName] = buffer.ToArray();
+
         SavedStream = stream;
         SavedStoredName = storedName;
         SavedContentType = contentType;
 
         return Task.FromResult(storedName);
+    }
+
+    public Task<Stream> GetAsync(string storedName)
+    {
+        LastRequestedKey = storedName;
+
+        Objects.TryGetValue(storedName, out var bytes);
+        bytes ??= [];
+
+        return Task.FromResult<Stream>(new MemoryStream(bytes));
     }
 }
 
@@ -47,5 +65,11 @@ public sealed class FakeFileRepository : IFileRepository
     {
         Files.Add(file);
         return Task.CompletedTask;
+    }
+
+    public Task<StoredFile?> GetAsync(string storedName)
+    {
+        return Task.FromResult(
+            Files.FirstOrDefault(f => f.StoredName == storedName));
     }
 }
