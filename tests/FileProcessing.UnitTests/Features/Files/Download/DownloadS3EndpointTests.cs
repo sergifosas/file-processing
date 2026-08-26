@@ -3,6 +3,7 @@ using FileProcessing.Api.Domain.Files;
 using FileProcessing.Api.Features.Files.Download;
 using FileProcessing.UnitTests.TestDoubles;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FileProcessing.UnitTests.Features.Files.Download;
 
@@ -17,7 +18,8 @@ public class DownloadS3EndpointTests
             new FileProcessingService(
                 new FakeFileStorage(),
                 s3Storage,
-                repository));
+                repository,
+                NullLogger<FileProcessingService>.Instance));
 
         const string storedName = "abc.txt";
         repository.Files.Add(new StoredFile
@@ -51,7 +53,8 @@ public class DownloadS3EndpointTests
             new FileProcessingService(
                 new FakeFileStorage(),
                 new FakeS3Storage(),
-                new FakeFileRepository()));
+                new FakeFileRepository(),
+                NullLogger<FileProcessingService>.Instance));
 
         var result = await endpoint.Download("no-existe.txt");
 

@@ -1,6 +1,7 @@
 using FileProcessing.Api.Application.Services;
 using FileProcessing.Api.Domain.Files;
 using FileProcessing.UnitTests.TestDoubles;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FileProcessing.UnitTests.Application.Services;
 
@@ -19,7 +20,8 @@ public class FileProcessingServiceTests
         _service = new FileProcessingService(
             _storage,
             _s3Storage,
-            _repository);
+            _repository,
+            NullLogger<FileProcessingService>.Instance);
     }
 
     [Fact]
