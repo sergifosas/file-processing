@@ -3,6 +3,7 @@ using FileProcessing.Api.Features.Files.Size;
 using FileProcessing.UnitTests.TestDoubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FileProcessing.UnitTests.Features.Files.Size;
 
@@ -12,7 +13,8 @@ public class SizeEndpointTests
         new(new FileProcessingService(
             new FakeFileStorage(),
             new FakeS3Storage(),
-            new FakeFileRepository()));
+            new FakeFileRepository(),
+            NullLogger<FileProcessingService>.Instance));
 
     private static FormFile CreateFile(string content = "contenido de prueba")
     {
@@ -58,7 +60,8 @@ public class SizeEndpointTests
             new FileProcessingService(
                 storage,
                 new FakeS3Storage(),
-                repository));
+                repository,
+                NullLogger<FileProcessingService>.Instance));
         var file = CreateFile();
 
         var result = await endpoint.GetSize(file);

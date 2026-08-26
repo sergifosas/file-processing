@@ -3,6 +3,7 @@ using FileProcessing.Api.Features.Files.Upload;
 using FileProcessing.UnitTests.TestDoubles;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace FileProcessing.UnitTests.Features.Files.Upload;
 
@@ -12,7 +13,8 @@ public class UploadS3EndpointTests
         new(new FileProcessingService(
             new FakeFileStorage(),
             new FakeS3Storage(),
-            new FakeFileRepository()));
+            new FakeFileRepository(),
+            NullLogger<FileProcessingService>.Instance));
 
     private static FormFile CreateFile(string content = "contenido de prueba")
     {
@@ -69,7 +71,8 @@ public class UploadS3EndpointTests
             new FileProcessingService(
                 new FakeFileStorage(),
                 s3Storage,
-                new FakeFileRepository()));
+                new FakeFileRepository(),
+                NullLogger<FileProcessingService>.Instance));
 
         var file = CreateFile();
         var result = await endpoint.Upload(file);
