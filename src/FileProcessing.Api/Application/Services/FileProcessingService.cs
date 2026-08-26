@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using FileProcessing.Api.Domain.Files;
 
 namespace FileProcessing.Api.Application.Services;
@@ -13,14 +14,18 @@ public class FileProcessingService
     private readonly IStorage _s3Storage;
     private readonly IFileRepository _repository;
 
+     private readonly ILogger<FileProcessingService> _logger;
+
     public FileProcessingService(
         IFileStorage storage,
         IStorage s3Storage,
-        IFileRepository repository)
+        IFileRepository repository,
+        ILogger<FileProcessingService> logger)
     {
         _storage = storage;
         _s3Storage = s3Storage;
         _repository = repository;
+        _logger = logger;
     }
 
     public async Task<string> ProcessAsync(
@@ -30,10 +35,28 @@ public class FileProcessingService
         long size)
     {
         if (file is null)
+        {
+            _logger.LogWarning(
+                "CanonicalLog Event={Event} Outcome={Outcome} FileName={FileName}",
+                "Process",
+                "NullStream",
+                originalName);
+
             throw new ArgumentNullException(nameof(file));
+        }
 
         if (size == 0)
+        {
+            _logger.LogWarning(
+                "CanonicalLog Event={Event} Outcome={Outcome} FileName={FileName}",
+                "Process",
+                "EmptyFile",
+                originalName);
+
             throw new ArgumentException("El archivo está vacío.", nameof(size));
+        }
+
+        var timer = Stopwatch.StartNew();
 
         var storedName =
             $"{Guid.NewGuid()}{Path.GetExtension(originalName)}";
@@ -55,6 +78,23 @@ public class FileProcessingService
 
         await _repository.AddAsync(storedFile);
 
+        timer.Stop();
+
+        _logger.LogInformation(
+            "CanonicalLog Event={Event} Component={Component} Count={Count} " +
+            "Storage={Storage} FileName={FileName} FileSizeBytes={FileSize} " +
+            "ContentType={ContentType} StoredName={StoredName} " +
+            "DurationMs={DurationMs}",
+            "Process",
+            "FileProcessing.Api",
+            1,
+            "Local",
+            originalName,
+            size,
+            contentType,
+            storedName,
+            timer.Elapsed.TotalMilliseconds);
+
         return storedName;
     }
 
@@ -65,12 +105,30 @@ public class FileProcessingService
         long size)
     {
         if (file is null)
+        {
+            _logger.LogWarning(
+                "CanonicalLog Event={Event} Outcome={Outcome} FileName={FileName}",
+                "ProcessS3",
+                "NullStream",
+                originalName);
+
             throw new ArgumentNullException(nameof(file));
+        }
 
         if (size <= 0)
+        {
+            _logger.LogWarning(
+                "CanonicalLog Event={Event} Outcome={Outcome} FileName={FileName}",
+                "ProcessS3",
+                "EmptyFile",
+                originalName);
+
             throw new ArgumentException(
                 "El archivo está vacío.",
                 nameof(size));
+        }
+
+        var timer = Stopwatch.StartNew();
 
         var storedName =
             $"{Guid.NewGuid()}{Path.GetExtension(originalName)}";
@@ -92,22 +150,80 @@ public class FileProcessingService
 
         await _repository.AddAsync(storedFile);
 
+        timer.Stop();
+
+        _logger.LogInformation(
+            "CanonicalLog Event={Event} Component={Component} Count={Count} " +
+            "Storage={Storage} FileName={FileName} FileSizeBytes={FileSize} " +
+            "ContentType={ContentType} StoredName={StoredName} " +
+            "DurationMs={DurationMs}",
+            "ProcessS3",
+            "FileProcessing.Api",
+            1,
+            "S3",
+            originalName,
+            size,
+            contentType,
+            storedName,
+            timer.Elapsed.TotalMilliseconds);
+
         return storedName;
     }
 
     public async Task<DownloadResult?> DownloadS3Async(string storedName)
     {
         if (string.IsNullOrWhiteSpace(storedName))
+        {
+            _logger.LogWarning(
+                "CanonicalLog Event={Event} Outcome={Outcome} StoredName={StoredName}",
+                "DownloadS3",
+                "InvalidName",
+                storedName);
+
             throw new ArgumentException(
                 "El nombre almacenado no es válido.",
                 nameof(storedName));
+        }
+
+        var timer = Stopwatch.StartNew();
 
         var storedFile = await _repository.GetAsync(storedName);
 
         if (storedFile is null)
+        {
+            timer.Stop();
+
+            _logger.LogInformation(
+                "CanonicalLog Event={Event} Component={Component} Outcome={Outcome} " +
+                "Storage={Storage} StoredName={StoredName} DurationMs={DurationMs}",
+                "DownloadS3",
+                "FileProcessing.Api",
+                "NotFound",
+                "S3",
+                storedName,
+                timer.Elapsed.TotalMilliseconds);
+
             return null;
+        }
 
         var content = await _s3Storage.GetAsync(storedName);
+
+        timer.Stop();
+
+        _logger.LogInformation(
+            "CanonicalLog Event={Event} Component={Component} Count={Count} " +
+            "Outcome={Outcome} Storage={Storage} StoredName={StoredName} " +
+            "OriginalName={OriginalName} ContentType={ContentType} " +
+            "DurationMs={DurationMs}",
+            "DownloadS3",
+            "FileProcessing.Api",
+            1,
+            "Success",
+            "S3",
+            storedName,
+            storedFile.OriginalName,
+            storedFile.ContentType,
+            timer.Elapsed.TotalMilliseconds);
 
         return new DownloadResult(
             content,

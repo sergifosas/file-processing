@@ -1,15 +1,19 @@
 using FileProcessing.Api.Application.Services;
+using FileProcessing.Api.Infrastructure.Logging;
 using FileProcessing.Api.Infrastructure.Persistence;
 using FileProcessing.Api.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Amazon;
 using Amazon.S3;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+
 builder.Services.AddEndpointsApiExplorer();
+builder.AddCloudWatchLogging();
 builder.Services.AddSwaggerGen();
 
 builder.Services.Configure<LocalFileStorageOptions>(
@@ -63,6 +67,8 @@ if (!app.Environment.IsEnvironment("Testing"))
 {
     app.UseHttpsRedirection();
 }
+
+app.UseSerilogRequestLogging();
 
 app.MapControllers();
 
