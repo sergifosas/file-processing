@@ -9,6 +9,13 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Sobrecarga opcional con valores locales (credenciales de desarrollo).
+// No debe commitearse (ver .gitignore: appsettings.*.Local.json).
+builder.Configuration.AddJsonFile(
+    "appsettings.Local.json",
+    optional: true,
+    reloadOnChange: true);
+
 builder.Services.AddControllers();
 
 
@@ -18,6 +25,12 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.Configure<LocalFileStorageOptions>(
     builder.Configuration.GetSection("Storage"));
+
+builder.Services.Configure<AwsOptions>(
+    builder.Configuration.GetSection("AWS"));
+
+builder.Services.Configure<CloudWatchOptions>(
+    builder.Configuration.GetSection("AWS:CloudWatch"));
 
 builder.Services.AddScoped<FileProcessingService>();
 builder.Services.AddScoped<IFileStorage, LocalFileStorage>();

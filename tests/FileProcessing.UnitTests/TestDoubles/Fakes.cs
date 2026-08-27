@@ -1,5 +1,6 @@
 using FileProcessing.Api.Application.Services;
 using FileProcessing.Api.Domain.Files;
+using FileProcessing.Api.Domain.Metadata;
 
 namespace FileProcessing.UnitTests.TestDoubles;
 
@@ -28,6 +29,8 @@ public sealed class FakeS3Storage : IStorage
 
     public Dictionary<string, byte[]> Objects { get; } = [];
 
+    public Dictionary<string, string> ContentTypes { get; } = [];
+
     public string? LastRequestedKey { get; private set; }
 
     public Task<string> SaveAsync(
@@ -38,6 +41,7 @@ public sealed class FakeS3Storage : IStorage
         using var buffer = new MemoryStream();
         stream.CopyTo(buffer);
         Objects[storedName] = buffer.ToArray();
+        ContentTypes[storedName] = contentType;
 
         SavedStream = stream;
         SavedStoredName = storedName;
@@ -54,6 +58,26 @@ public sealed class FakeS3Storage : IStorage
         bytes ??= [];
 
         return Task.FromResult<Stream>(new MemoryStream(bytes));
+    }
+
+    public Task<FileMetadata?> GetMetadataAsync(string storedName)
+    {
+        LastRequestedKey = storedName;
+
+        Objects.TryGetValue(storedName, out var bytes);
+
+        if (bytes is null)
+            return Task.FromResult<FileMetadata?>(null);
+
+        return Task.FromResult<FileMetadata?>(
+            new FileMetadata
+            {
+                StoredName = storedName,
+                ContentType = ContentTypes.TryGetValue(storedName, out var type)
+                    ? type
+                    : string.Empty,
+                Size = bytes.Length
+            });
     }
 }
 
