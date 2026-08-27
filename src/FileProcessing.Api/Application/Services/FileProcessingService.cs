@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using FileProcessing.Api.Domain.Files;
+using FileProcessing.Api.Domain.Metadata;
 
 namespace FileProcessing.Api.Application.Services;
 
@@ -8,13 +9,23 @@ public sealed record DownloadResult(
     string ContentType,
     string OriginalName);
 
+public record MetadataResult(
+    string OriginalName,
+    string Extension,
+    string ContentType,
+    long Size,
+    string ETag,
+    DateTimeOffset LastModified,
+    DateTime CreatedAt,
+    Dictionary<string, string>? Metadata);
+
 public class FileProcessingService
 {
     private readonly IFileStorage _storage;
     private readonly IStorage _s3Storage;
     private readonly IFileRepository _repository;
 
-     private readonly ILogger<FileProcessingService> _logger;
+    private readonly ILogger<FileProcessingService> _logger;
 
     public FileProcessingService(
         IFileStorage storage,
@@ -229,5 +240,90 @@ public class FileProcessingService
             content,
             storedFile.ContentType,
             storedFile.OriginalName);
+    }
+
+
+
+    public async Task<MetadataResult?> ObtainMetadataAsync(string storedName)
+    {
+        if (string.IsNullOrWhiteSpace(storedName))
+        {
+            _logger.LogWarning(
+                "CanonicalLog Event={Event} Outcome={Outcome} StoredName={StoredName}",
+                "ObtainMetadata",
+                "InvalidName",
+                storedName);
+
+            throw new ArgumentException(
+                "El nombre almacenado no es válido.",
+                nameof(storedName));
+        }
+
+        var timer = Stopwatch.StartNew();
+
+        var storedFile = await _repository.GetAsync(storedName);
+
+        if (storedFile is null)
+        {
+            timer.Stop();
+
+            _logger.LogInformation(
+                "CanonicalLog Event={Event} Component={Component} Outcome={Outcome} " +
+                "Storage={Storage} StoredName={StoredName} DurationMs={DurationMs}",
+                "ObtainMetadata",
+                "FileProcessing.Api",
+                "NotFound",
+                "S3",
+                storedName,
+                timer.Elapsed.TotalMilliseconds);
+
+            return null;
+        }
+
+        var s3Metadata = await _s3Storage.GetMetadataAsync(storedName);
+
+        if (s3Metadata is null)
+        {
+            timer.Stop();
+
+            _logger.LogInformation(
+                "CanonicalLog Event={Event} Component={Component} Outcome={Outcome} " +
+                "Storage={Storage} StoredName={StoredName} DurationMs={DurationMs}",
+                "ObtainMetadata",
+                "FileProcessing.Api",
+                "NotFound",
+                "S3",
+                storedName,
+                timer.Elapsed.TotalMilliseconds);
+
+            return null;
+        }
+
+        timer.Stop();
+
+        _logger.LogInformation(
+            "CanonicalLog Event={Event} Component={Component} Count={Count} " +
+            "Outcome={Outcome} Storage={Storage} StoredName={StoredName} " +
+            "OriginalName={OriginalName} ContentType={ContentType} " +
+            "DurationMs={DurationMs}",
+            "ObtainMetadata",
+            "FileProcessing.Api",
+            1,
+            "Success",
+            "S3",
+            storedName,
+            storedFile.OriginalName,
+            storedFile.ContentType,
+            timer.Elapsed.TotalMilliseconds);
+
+        return new MetadataResult(
+            storedFile.OriginalName,
+            Path.GetExtension(storedFile.OriginalName),
+            s3Metadata.ContentType,
+            s3Metadata.Size,
+            s3Metadata.ETag,
+            s3Metadata.LastModified,
+            storedFile.CreatedAt,
+            s3Metadata.Metadata);
     }
 }

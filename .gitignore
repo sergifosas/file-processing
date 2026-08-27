@@ -9,6 +9,10 @@
 # Uploaded files (runtime artifact)
 uploads/
 
+# Local app settings (may contain local development credentials)
+appsettings.Local.json
+appsettings.*.Local.json
+
 # User-specific files
 *.rsuser
 *.suo
